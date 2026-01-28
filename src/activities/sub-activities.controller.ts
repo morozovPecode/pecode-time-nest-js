@@ -49,7 +49,6 @@ export class SubActivitiesController {
     @Query() { activity_id }: SubActivityQuery,
     @Query() pagination: PaginationQuery,
   ) {
-    console.log(activity_id)
     return {
       next: null,
       previous: null,
