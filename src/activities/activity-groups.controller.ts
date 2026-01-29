@@ -8,9 +8,9 @@ import {
   Query,
   Delete,
 } from '@nestjs/common';
-import { Serialize } from 'src/lib/interceptors';
+import { Serialize, SerializeList } from 'src/lib/interceptors';
 import { ActivityGroupResponse, ActivityGroupPayload } from './dtos';
-import { IdParam, ListResponse, PaginationQuery } from 'src/lib/dtos';
+import { IdParam, PaginationQuery } from 'src/lib/dtos';
 
 const HARDCODED_ACTIVITY_GROUP: ActivityGroupResponse = {
   id: 1,
@@ -38,7 +38,7 @@ export class ActivityGroupsController {
   }
 
   @Get('/')
-  @Serialize(ListResponse(ActivityGroupResponse))
+  @SerializeList(ActivityGroupResponse)
   list(@Query() pagination: PaginationQuery) {
     return {
       next: null,

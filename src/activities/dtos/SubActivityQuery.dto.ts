@@ -5,5 +5,5 @@ export class SubActivityQuery {
   @IsOptional()
   @Type(() => Number)
   @IsInt()
-  activity_id: number;
+  activity_id: number | undefined;
 }

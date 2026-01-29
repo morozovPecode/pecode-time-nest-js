@@ -8,13 +8,13 @@ import {
   Query,
   Delete,
 } from '@nestjs/common';
-import { Serialize } from 'src/lib/interceptors';
+import { Serialize, SerializeList } from 'src/lib/interceptors';
 import {
   ActivityPayload,
   ActivityResponse,
   ActivityUpdatePayload,
 } from './dtos';
-import { ListResponse, PaginationQuery, IdParam } from 'src/lib/dtos';
+import { PaginationQuery, IdParam } from 'src/lib/dtos';
 
 const HARDCODED_ACTIVITY: ActivityResponse = {
   id: 1,
@@ -23,8 +23,6 @@ const HARDCODED_ACTIVITY: ActivityResponse = {
     name: 'Internal Activities',
   },
   name: 'Education',
-  // @ts-ignore
-  password: '',
 };
 
 @Controller('activities')
@@ -48,7 +46,7 @@ export class ActivitiesController {
   }
 
   @Get('/')
-  @Serialize(ListResponse(ActivityResponse))
+  @SerializeList(ActivityResponse)
   list(@Query() pagination: PaginationQuery) {
     return {
       next: null,

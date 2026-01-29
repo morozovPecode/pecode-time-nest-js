@@ -6,7 +6,9 @@ export class SubActivityPayload {
   name: string;
 
   @IsInt()
-  activity_id: string;
+  activity_id: number;
 }
 
-export class SubActivityUpdatePayload extends PickType(SubActivityPayload, ['name']) {}
+export class SubActivityUpdatePayload extends PickType(SubActivityPayload, [
+  'name',
+]) {}

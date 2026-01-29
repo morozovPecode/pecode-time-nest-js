@@ -8,14 +8,14 @@ import {
   Query,
   Delete,
 } from '@nestjs/common';
-import { Serialize } from 'src/lib/interceptors';
+import { Serialize, SerializeList } from 'src/lib/interceptors';
 import {
   SubActivityPayload,
   SubActivityResponse,
   SubActivityUpdatePayload,
   SubActivityQuery,
 } from './dtos';
-import { IdParam, ListResponse, PaginationQuery } from 'src/lib/dtos';
+import { IdParam, PaginationQuery } from 'src/lib/dtos';
 
 const HARDCODED_SUB_ACTIVITY: SubActivityResponse = {
   id: 1,
@@ -44,7 +44,7 @@ export class SubActivitiesController {
   }
 
   @Get('/')
-  @Serialize(ListResponse(SubActivityResponse))
+  @SerializeList(SubActivityResponse)
   list(
     @Query() { activity_id }: SubActivityQuery,
     @Query() pagination: PaginationQuery,
