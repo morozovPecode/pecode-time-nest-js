@@ -1,7 +1,6 @@
 import 'dotenv/config';
 import 'reflect-metadata';
 import { DataSource } from 'typeorm';
-import { ActivityGroup, Activity, SubActivity } from './activities/entities';
 
 const AppDataSource = new DataSource({
   type: 'postgres',
