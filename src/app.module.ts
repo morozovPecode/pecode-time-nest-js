@@ -2,6 +2,9 @@ import { Module } from '@nestjs/common';
 import { ActivitiesModule } from './activities/activities.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Activity, ActivityGroup, SubActivity } from './activities/entities';
+import { AuthModule } from './auth/auth.module';
+import { UsersModule } from './users/users.module';
+import { User } from './users/entities';
 
 @Module({
   imports: [
@@ -12,10 +15,12 @@ import { Activity, ActivityGroup, SubActivity } from './activities/entities';
       username: process.env.DATABASE_USERNAME,
       password: process.env.DATABASE_PASSWORD,
       database: process.env.DATABASE_NAME,
-      entities: [Activity, ActivityGroup, SubActivity],
+      entities: [Activity, ActivityGroup, SubActivity, User],
       synchronize: false,
     }),
     ActivitiesModule,
+    AuthModule,
+    UsersModule,
   ],
 })
 export class AppModule {}
