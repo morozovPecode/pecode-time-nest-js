@@ -7,7 +7,6 @@ import {
   Patch,
   Query,
   Delete,
-  Inject,
 } from '@nestjs/common';
 import { Serialize, SerializeList } from 'src/lib/interceptors';
 import {
@@ -21,9 +20,7 @@ import { SubActivitiesService } from './services';
 
 @Controller('sub-activities')
 export class SubActivitiesController {
-  constructor(
-    @Inject(SubActivitiesService) private service: SubActivitiesService,
-  ) {}
+  constructor(private service: SubActivitiesService) {}
 
   @Post('/')
   @Serialize(SubActivityResponse)

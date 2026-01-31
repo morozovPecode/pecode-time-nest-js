@@ -7,7 +7,6 @@ import {
   Patch,
   Query,
   Delete,
-  Inject,
 } from '@nestjs/common';
 import { Serialize, SerializeList } from 'src/lib/interceptors';
 import { ActivityGroupResponse, ActivityGroupPayload } from './dtos';
@@ -16,9 +15,7 @@ import { ActivityGroupsService } from './services';
 
 @Controller('activity-groups')
 export class ActivityGroupsController {
-  constructor(
-    @Inject(ActivityGroupsService) private service: ActivityGroupsService,
-  ) {}
+  constructor(private service: ActivityGroupsService) {}
 
   @Post('/')
   @Serialize(ActivityGroupResponse)
