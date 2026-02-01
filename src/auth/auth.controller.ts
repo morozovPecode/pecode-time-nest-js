@@ -6,30 +6,49 @@ import {
   SignUpPayload,
   VerificationCodeRequestPayload,
 } from './dtos';
-import { JwtService } from '@nestjs/jwt';
+import { RefreshToken } from './decorators';
 
 @Controller('auth')
 export class AuthController {
-  constructor(
-    private service: AuthService,
-    private jwtService: JwtService,
-  ) {}
+  constructor(private service: AuthService) {}
+
+  private setCookies(
+    res: Response,
+    {
+      access_token,
+      refresh_token,
+    }: {
+      access_token: string;
+      refresh_token: string;
+    },
+  ) {
+    res.cookie('access_token', access_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+    });
+
+    res.cookie('refresh_token', refresh_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/auth',
+    });
+  }
+
+  private clearCookies(res: Response) {
+    res.clearCookie('refresh_token', { path: '/auth' });
+    res.clearCookie('access_token', { path: '/' });
+  }
 
   @Post('/signup')
   async signup(
     @Body() payload: SignUpPayload,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const user = await this.service.signup(payload);
-    const token = this.jwtService.sign({ id: user.id, email: user.email });
-
-    res.cookie('access_token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: '/',
-    });
+    const tokens = await this.service.signup(payload);
+    this.setCookies(res, tokens);
 
     return { success: true };
   }
@@ -39,16 +58,8 @@ export class AuthController {
     @Body() payload: SignInPayload,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const user = await this.service.signin(payload);
-    const token = this.jwtService.sign({ id: user.id, email: user.email });
-
-    res.cookie('access_token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: '/',
-    });
+    const tokens = await this.service.signin(payload);
+    this.setCookies(res, tokens);
 
     return { success: true };
   }
@@ -57,6 +68,36 @@ export class AuthController {
   async sendVerificationCode(
     @Body() { email }: VerificationCodeRequestPayload,
   ) {
-    return this.service.sendVerificationCode(email);
+    await this.service.sendVerificationCode(email);
+    return { success: true };
+  }
+
+  @Post('/refresh')
+  async refresh(
+    @RefreshToken() refreshToken: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const tokens = await this.service.refreshAccessToken(refreshToken);
+    this.setCookies(res, tokens);
+
+    return { success: true };
+  }
+
+  @Post('/logout')
+  async logout(
+    @RefreshToken() refreshToken: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    this.clearCookies(res);
+    return this.service.logout(refreshToken);
+  }
+
+  @Post('/logout-all')
+  async logoutAll(
+    @RefreshToken() refreshToken: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    this.clearCookies(res);
+    return this.service.logoutAll(refreshToken);
   }
 }

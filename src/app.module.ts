@@ -5,6 +5,7 @@ import { Activity, ActivityGroup, SubActivity } from './activities/entities';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { User } from './users/entities';
+import { AuthSession } from './auth/entities';
 
 @Module({
   imports: [
@@ -15,7 +16,7 @@ import { User } from './users/entities';
       username: process.env.DATABASE_USERNAME,
       password: process.env.DATABASE_PASSWORD,
       database: process.env.DATABASE_NAME,
-      entities: [Activity, ActivityGroup, SubActivity, User],
+      entities: [Activity, ActivityGroup, SubActivity, User, AuthSession],
       synchronize: false,
     }),
     ActivitiesModule,

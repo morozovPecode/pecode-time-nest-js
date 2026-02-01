@@ -3,11 +3,19 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
+import {
+  createHmac,
+  randomBytes,
+  scrypt,
+  timingSafeEqual,
+  randomUUID,
+} from 'node:crypto';
 import { SignInPayload, SignUpPayload } from '../dtos';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from 'src/users/entities';
 import { Repository } from 'typeorm';
+import { AuthSession } from '../entities';
+import { JwtService } from './jwt.service';
 
 export function scryptAsync(
   password: string,
@@ -24,7 +32,11 @@ export function scryptAsync(
 
 @Injectable()
 export class AuthService {
-  constructor(@InjectRepository(User) private userRepo: Repository<User>) {}
+  constructor(
+    @InjectRepository(User) private userRepo: Repository<User>,
+    @InjectRepository(AuthSession) private repo: Repository<AuthSession>,
+    private jwtService: JwtService,
+  ) {}
 
   private async hashPassword(password: string) {
     const salt = randomBytes(16);
@@ -60,6 +72,47 @@ export class AuthService {
     return true;
   }
 
+  private async hashRefreshToken(token: string) {
+    return createHmac('sha256', process.env.REFRESH_TOKEN_HASH_SECRET!)
+      .update(token)
+      .digest('base64url');
+  }
+
+  private async verifyRefreshTokenHash(token: string, tokenHash: string) {
+    const computed = await this.hashRefreshToken(token);
+
+    const a = Buffer.from(computed);
+    const b = Buffer.from(tokenHash);
+
+    return a.length === b.length && timingSafeEqual(a, b);
+  }
+
+  private async initializeUserSession(user: User) {
+    const sessionId = randomUUID();
+    const refreshToken = this.jwtService.signRefresh({
+      session_id: sessionId,
+      user_id: user.id,
+    });
+
+    const refreshHash = await this.hashRefreshToken(refreshToken);
+
+    const authSession = this.repo.create({
+      id: sessionId,
+      user_id: user.id,
+      refresh_hash: refreshHash,
+    });
+
+    await this.repo.save(authSession);
+
+    const accessToken = this.jwtService.signAccess({
+      id: user.id,
+      email: user.email,
+      session_id: sessionId,
+    });
+
+    return { access_token: accessToken, refresh_token: refreshToken };
+  }
+
   public async sendVerificationCode(email: string) {
     const code = await this.createVerificationCode(email);
     // Тут за допомогою якогось провайдера по відправці email-ів
@@ -90,7 +143,7 @@ export class AuthService {
 
     const user = await this.userRepo.save(_user);
 
-    return user;
+    return this.initializeUserSession(user);
   }
 
   public async signin(data: SignInPayload) {
@@ -109,6 +162,63 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    return user;
+    return this.initializeUserSession(user);
+  }
+
+  public async refreshAccessToken(refreshToken: string) {
+    const { session_id, user_id } = this.jwtService.verifyRefresh(refreshToken);
+
+    const user = await this.userRepo.findOneBy({ id: user_id });
+
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+
+    const authSession = await this.repo.findOneBy({ id: session_id, user_id });
+
+    if (!authSession) {
+      throw new UnauthorizedException();
+    }
+
+    const isValid = await this.verifyRefreshTokenHash(
+      refreshToken,
+      authSession.refresh_hash,
+    );
+
+    if (!isValid) {
+      throw new UnauthorizedException();
+    }
+
+    const newRefreshToken = this.jwtService.signRefresh({
+      session_id,
+      user_id,
+    });
+    const newRefreshHash = await this.hashRefreshToken(newRefreshToken);
+
+    await this.repo.save({ ...authSession, refresh_hash: newRefreshHash });
+
+    const accessToken = this.jwtService.signAccess({
+      id: user.id,
+      email: user.email,
+      session_id,
+    });
+
+    return { access_token: accessToken, refresh_token: newRefreshToken };
+  }
+
+  public async logout(refresh_token: string) {
+    const { session_id } = this.jwtService.verifyRefresh(refresh_token);
+
+    await this.repo.delete({ id: session_id });
+
+    return { success: true };
+  }
+
+  public async logoutAll(refresh_token: string) {
+    const { user_id } = this.jwtService.verifyRefresh(refresh_token);
+
+    await this.repo.delete({ user_id });
+
+    return { success: true };
   }
 }
