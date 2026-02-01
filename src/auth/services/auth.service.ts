@@ -36,6 +36,8 @@ export class AuthService {
   private async verifyPassword(password: string, hashed: string) {
     const [hashBase64, saltBase64] = hashed.split('$');
 
+    if (!saltBase64 || !hashBase64) return false;
+
     const salt = Buffer.from(saltBase64, 'base64');
     const expected = Buffer.from(hashBase64, 'base64');
 

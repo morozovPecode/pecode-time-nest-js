@@ -19,8 +19,8 @@ import { User } from './users/entities';
       synchronize: false,
     }),
     ActivitiesModule,
-    AuthModule,
     UsersModule,
+    AuthModule,
   ],
 })
 export class AppModule {}

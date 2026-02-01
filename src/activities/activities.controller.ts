@@ -8,6 +8,7 @@ import {
   Query,
   Delete,
   Inject,
+  UseGuards,
 } from '@nestjs/common';
 import { Serialize, SerializeList } from 'src/lib/interceptors';
 import {
@@ -17,7 +18,11 @@ import {
 } from './dtos';
 import { PaginationQuery, IdParam } from 'src/lib/dtos';
 import { ActivitiesService } from './services';
+import { AuthGuard } from 'src/auth/guards';
+import { CurrentUser } from 'src/lib/decorators';
+import { User } from 'src/users/entities';
 
+@UseGuards(AuthGuard)
 @Controller('activities')
 export class ActivitiesController {
   constructor(@Inject(ActivitiesService) private service: ActivitiesService) {}
@@ -42,7 +47,7 @@ export class ActivitiesController {
 
   @Get('/')
   @SerializeList(ActivityResponse)
-  list(@Query() pagination: PaginationQuery) {
+  list(@Query() pagination: PaginationQuery, @CurrentUser() user: User) {
     return this.service.list(pagination);
   }
 
