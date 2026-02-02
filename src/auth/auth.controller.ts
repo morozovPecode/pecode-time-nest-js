@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Res } from '@nestjs/common';
+import { Body, Controller, Post, Res, UseGuards } from '@nestjs/common';
 import type { Response } from 'express';
 import { AuthService } from './services';
 import {
@@ -7,6 +7,10 @@ import {
   VerificationCodeRequestPayload,
 } from './dtos';
 import { RefreshToken } from './decorators';
+import { LocalAuthGuard, RefreshGuard } from './guards';
+import { CurrentUser, SessionId } from 'src/lib/decorators';
+import { User } from 'src/users/entities';
+import type { UUID } from 'crypto';
 
 @Controller('auth')
 export class AuthController {
@@ -53,12 +57,14 @@ export class AuthController {
     return { success: true };
   }
 
+  @UseGuards(LocalAuthGuard)
   @Post('/signin')
   async signin(
-    @Body() payload: SignInPayload,
+    @Body() _: SignInPayload,
+    @CurrentUser() user: User,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const tokens = await this.service.signin(payload);
+    const tokens = await this.service.initializeUserSession(user);
     this.setCookies(res, tokens);
 
     return { success: true };
@@ -72,32 +78,40 @@ export class AuthController {
     return { success: true };
   }
 
+  @UseGuards(RefreshGuard)
   @Post('/refresh')
   async refresh(
-    @RefreshToken() refreshToken: string,
+    @CurrentUser() user: User,
+    @SessionId() session_id: UUID,
+    @RefreshToken() refresh_token: string,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const tokens = await this.service.refreshAccessToken(refreshToken);
+    const tokens = await this.service.refreshAccessToken(refresh_token, {
+      user,
+      session_id,
+    });
     this.setCookies(res, tokens);
 
     return { success: true };
   }
 
+  @UseGuards(RefreshGuard)
   @Post('/logout')
   async logout(
-    @RefreshToken() refreshToken: string,
+    @SessionId() session_id: UUID,
     @Res({ passthrough: true }) res: Response,
   ) {
     this.clearCookies(res);
-    return this.service.logout(refreshToken);
+    return this.service.logout(session_id);
   }
 
+  @UseGuards(RefreshGuard)
   @Post('/logout-all')
   async logoutAll(
-    @RefreshToken() refreshToken: string,
+    @CurrentUser() user: User,
     @Res({ passthrough: true }) res: Response,
   ) {
     this.clearCookies(res);
-    return this.service.logoutAll(refreshToken);
+    return this.service.logoutAll(user.id);
   }
 }

@@ -18,11 +18,11 @@ import {
 } from './dtos';
 import { PaginationQuery, IdParam } from 'src/lib/dtos';
 import { ActivitiesService } from './services';
-import { AuthGuard } from 'src/auth/guards';
+import { AccessGuard } from 'src/auth/guards';
 import { CurrentUser } from 'src/lib/decorators';
 import { User } from 'src/users/entities';
 
-@UseGuards(AuthGuard)
+@UseGuards(AccessGuard)
 @Controller('activities')
 export class ActivitiesController {
   constructor(@Inject(ActivitiesService) private service: ActivitiesService) {}

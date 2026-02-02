@@ -9,6 +9,7 @@ import {
   scrypt,
   timingSafeEqual,
   randomUUID,
+  UUID,
 } from 'node:crypto';
 import { SignInPayload, SignUpPayload } from '../dtos';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -16,6 +17,7 @@ import { User } from 'src/users/entities';
 import { Repository } from 'typeorm';
 import { AuthSession } from '../entities';
 import { JwtService } from './jwt.service';
+import { AuthContext } from '../auth-strategies';
 
 export function scryptAsync(
   password: string,
@@ -87,7 +89,7 @@ export class AuthService {
     return a.length === b.length && timingSafeEqual(a, b);
   }
 
-  private async initializeUserSession(user: User) {
+  public async initializeUserSession(user: User) {
     const sessionId = randomUUID();
     const refreshToken = this.jwtService.signRefresh({
       session_id: sessionId,
@@ -146,7 +148,7 @@ export class AuthService {
     return this.initializeUserSession(user);
   }
 
-  public async signin(data: SignInPayload) {
+  public async validateLocalUser(data: SignInPayload) {
     const user = await this.userRepo.findOneBy({ email: data.email });
 
     if (!user) {
@@ -162,19 +164,21 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    return this.initializeUserSession(user);
+    return user;
   }
 
-  public async refreshAccessToken(refreshToken: string) {
-    const { session_id, user_id } = this.jwtService.verifyRefresh(refreshToken);
-
-    const user = await this.userRepo.findOneBy({ id: user_id });
-
-    if (!user) {
+  public async refreshAccessToken(
+    refreshToken: string,
+    { user, session_id }: AuthContext,
+  ) {
+    if (!session_id) {
       throw new UnauthorizedException();
     }
 
-    const authSession = await this.repo.findOneBy({ id: session_id, user_id });
+    const authSession = await this.repo.findOneBy({
+      id: session_id,
+      user_id: user.id,
+    });
 
     if (!authSession) {
       throw new UnauthorizedException();
@@ -191,7 +195,7 @@ export class AuthService {
 
     const newRefreshToken = this.jwtService.signRefresh({
       session_id,
-      user_id,
+      user_id: user.id,
     });
     const newRefreshHash = await this.hashRefreshToken(newRefreshToken);
 
@@ -206,17 +210,12 @@ export class AuthService {
     return { access_token: accessToken, refresh_token: newRefreshToken };
   }
 
-  public async logout(refresh_token: string) {
-    const { session_id } = this.jwtService.verifyRefresh(refresh_token);
-
+  public async logout(session_id: UUID) {
     await this.repo.delete({ id: session_id });
-
     return { success: true };
   }
 
-  public async logoutAll(refresh_token: string) {
-    const { user_id } = this.jwtService.verifyRefresh(refresh_token);
-
+  public async logoutAll(user_id: number) {
     await this.repo.delete({ user_id });
 
     return { success: true };

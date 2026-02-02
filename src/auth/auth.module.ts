@@ -5,6 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from 'src/users/entities';
 import { JwtModule } from '@nestjs/jwt';
 import { AuthSession } from './entities';
+import { AccessStrategy, LocalStrategy, RefreshStrategy } from './auth-strategies';
 
 @Global()
 @Module({
@@ -15,7 +16,6 @@ import { AuthSession } from './entities';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtService],
-  exports: [JwtService],
+  providers: [AuthService, JwtService, AccessStrategy, RefreshStrategy, LocalStrategy],
 })
 export class AuthModule {}

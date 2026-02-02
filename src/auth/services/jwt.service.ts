@@ -20,12 +20,6 @@ export class JwtService {
     );
   }
 
-  verifyAccess(token: string) {
-    return this._jwtService.verify<AccessPayload>(token, {
-      secret: process.env.ACCESS_TOKEN_SECRET,
-    });
-  }
-
   signRefresh({ session_id, user_id }: RefreshPayload) {
     return this._jwtService.sign(
       { session_id, user_id },
@@ -34,11 +28,5 @@ export class JwtService {
         expiresIn: '2m',
       },
     );
-  }
-
-  verifyRefresh(token: string) {
-    return this._jwtService.verify<RefreshPayload>(token, {
-      secret: process.env.REFRESH_TOKEN_SECRET,
-    });
   }
 }
