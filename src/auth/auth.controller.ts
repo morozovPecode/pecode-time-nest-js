@@ -7,6 +7,7 @@ import {
   VerificationCodeRequestPayload,
 } from './dtos';
 import { JwtService } from '@nestjs/jwt';
+import { User } from 'src/users/entities';
 
 @Controller('auth')
 export class AuthController {
@@ -15,12 +16,7 @@ export class AuthController {
     private jwtService: JwtService,
   ) {}
 
-  @Post('/signup')
-  async signup(
-    @Body() payload: SignUpPayload,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    const user = await this.service.signup(payload);
+  private setAccessCookie(user: User, res: Response) {
     const token = this.jwtService.sign({ id: user.id, email: user.email });
 
     res.cookie('access_token', token, {
@@ -30,6 +26,15 @@ export class AuthController {
       maxAge: 7 * 24 * 60 * 60 * 1000,
       path: '/',
     });
+  }
+
+  @Post('/signup')
+  async signup(
+    @Body() payload: SignUpPayload,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const user = await this.service.signup(payload);
+    this.setAccessCookie(user, res);
 
     return { success: true };
   }
@@ -40,15 +45,7 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const user = await this.service.signin(payload);
-    const token = this.jwtService.sign({ id: user.id, email: user.email });
-
-    res.cookie('access_token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: '/',
-    });
+    this.setAccessCookie(user, res);
 
     return { success: true };
   }
